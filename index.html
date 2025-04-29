@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>길마루 - 중앙 고정 마커 버전</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: sans-serif; }
+    #header {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      padding: 10px;
+      background: #222;
+    }
+    #header button {
+      background: #fff;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #content > div {
+      display: none;
+      height: calc(100vh - 60px);
+      position: relative;
+    }
+    #map-section.active,
+    #info-section.active {
+      display: block;
+    }
+    #map { width: 100%; height: 100%; }
+    #center-marker {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 36px;
+      height: 36px;
+      margin-left: -18px;
+      margin-top: -36px;
+      background: url('https://cdn-icons-png.flaticon.com/512/2776/2776067.png') no-repeat center center;
+      background-size: contain;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    #address-display {
+      position: absolute;
+      top: calc(50% - 45px); /* 마커 위 10px 정도 */
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.75);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 14px;
+      white-space: nowrap;
+      z-index: 1001;
+      pointer-events: none;
+    }
+
+    @media (max-width: 768px) {
+      #header {
+        flex-direction: column;
+        align-items: center;
+      }
+      #header button {
+        width: 90%;
+        font-size: 18px;
+      }
+    }
+    #zoom-indicator {
+      color: white;
+      margin-left: auto;
+      margin-right: 20px;
+      font-size: 14px;
+      align-self: center;
+    }
+  </style>
+
+  <!-- 카카오맵 SDK -->
+  <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c2db0ea3cf94c9b50e56b5883f54537a"></script>
+</head>
+<body>
+
+  <div id="header">
+    <button onclick="showSection('map')">지도 보기</button>
+    <button onclick="showSection('info')">설명 보기</button>
+    <div id="zoom-indicator">Zoom: -</div>
+  </div>
+
+  <div id="content">
+    <div id="map-section" class="active">
+      <div id="map"></div>
+      <div id="center-marker"></div>
+      <div id="address-display">코드: 로딩중...</div>
+    </div>
+    <div id="info-section">
+      <div style="padding: 20px;">
+        <h2>길마루 서비스 소개</h2>
+        <p>위치 좌표를 기억하기 쉬운 4개의 단어로 변환하는 위치 서비스입니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="word_data.js"></script>
+  <script>
+    const mapContainer = document.getElementById('map');
+    const mapOption = {
+      center: new kakao.maps.LatLng(37.4979, 127.0276),
+      level: 5
+    };
+    const map = new kakao.maps.Map(mapContainer, mapOption);
+    let gridOverlay = null;
+    let bigGridOverlay = null; // ← 추가: 2좌표 격자용
+  
+    function showSection(section) {
+      document.getElementById('map-section').classList.remove('active');
+      document.getElementById('info-section').classList.remove('active');
+      document.getElementById(`${section}-section`).classList.add('active');
+    }
+  
+    function latLngToGilmaru(lat, lng, level) {
+      const originLon = 124.6;
+      const originLat = 33.0;
+  
+      const blockSize = 0.05;
+      const subBlockSize = 0.0001;
+  
+      const x = Math.floor((lng - originLon) / blockSize);
+      const y = Math.floor((lat - originLat) / blockSize);
+      const codeX = "A" + String(x + 1).padStart(3, '0');
+      const codeY = "B" + String(y + 1).padStart(3, '0');
+  
+      if (level > 5) {
+        return { code: `${codeX}.${codeY}`, x, y, gridSize: blockSize };
+      }
+  
+      // 상세 주소 계산
+      const innerX = Math.floor(((lng - originLon) % blockSize) / subBlockSize);
+      const innerY = Math.floor(((lat - originLat) % blockSize) / subBlockSize);
+      const codeC = "C" + String(innerX + 1).padStart(3, '0');
+      const codeD = "D" + String(innerY + 1).padStart(3, '0');
+  
+      return {
+        code: `${codeX}.${codeY}.${codeC}.${codeD}`,
+        x: x * 500 + innerX,
+        y: y * 500 + innerY,
+        gridSize: subBlockSize
+      };
+    }
+  
+    function drawGrid(lat, lng, level) {
+  if (gridOverlay) gridOverlay.setMap(null);
+  if (bigGridOverlay) bigGridOverlay.setMap(null);
+
+  const originLon = 124.6;
+  const originLat = 33.0;
+
+  // 현재 그리드(레벨 기반)
+  const { gridSize, code } = latLngToGilmaru(lat, lng, level);
+  const x = Math.floor((lng - originLon) / gridSize);
+  const y = Math.floor((lat - originLat) / gridSize);
+  const swLatLng = new kakao.maps.LatLng(originLat + y * gridSize, originLon + x * gridSize);
+  const neLatLng = new kakao.maps.LatLng(originLat + (y + 1) * gridSize, originLon + (x + 1) * gridSize);
+
+  gridOverlay = new kakao.maps.Rectangle({
+    bounds: new kakao.maps.LatLngBounds(swLatLng, neLatLng),
+    strokeWeight: 2,
+    strokeColor: '#FF0000',
+    strokeOpacity: 0.8,
+    fillColor: '#FF0000',
+    fillOpacity: 0.1
+  });
+  gridOverlay.setMap(map);
+
+  // ✅ 추가: 대블록 격자 항상 표시 (0.05도 기준)
+  const bigSize = 0.05;
+  const bx = Math.floor((lng - originLon) / bigSize);
+  const by = Math.floor((lat - originLat) / bigSize);
+  const bsw = new kakao.maps.LatLng(originLat + by * bigSize, originLon + bx * bigSize);
+  const bne = new kakao.maps.LatLng(originLat + (by + 1) * bigSize, originLon + (bx + 1) * bigSize);
+
+  bigGridOverlay = new kakao.maps.Rectangle({
+    bounds: new kakao.maps.LatLngBounds(bsw, bne),
+    strokeWeight: 2,
+    strokeColor: '#000000',
+    strokeOpacity: 1,
+    fillOpacity: 0 // ⚠️ 채우지 않음
+  });
+  bigGridOverlay.setMap(map);
+}
+  
+    function updateCenterAddress() {
+      const center = map.getCenter();
+      const level = map.getLevel();
+      const gilmaru = latLngToGilmaru(center.getLat(), center.getLng(), level);
+
+      const text = fullAddress(gilmaru.code);
+      document.getElementById('address-display').textContent = `${text}`;
+
+      drawGrid(center.getLat(), center.getLng(), level);
+    }
+
+  
+    function updateZoomDisplay() {
+      const zoom = map.getLevel();
+      document.getElementById('zoom-indicator').textContent = `Zoom: ${zoom}`;
+    }
+  
+    kakao.maps.event.addListener(map, 'idle', () => {
+      updateCenterAddress();
+      updateZoomDisplay();
+    });
+  
+    updateCenterAddress();
+    updateZoomDisplay();
+  
+    function getWordFromCode(code) {
+      const prefix = code[0];
+      const number = parseInt(code.slice(1)) - 1;
+
+      if (prefix === 'A') return wordA[number] || "???";
+      if (prefix === 'B') return wordB[number] || "???";
+      if (prefix === 'C') return wordC[number] || "???";
+      if (prefix === 'D') return wordD[number] || "???";
+      return "???";
+    }
+
+    function fullAddress(code) {
+      const parts = code.split(".");
+      return parts.map(getWordFromCode).join(", ");
+    }
+
+  </script>
+  
+
+</body>
+</html>
