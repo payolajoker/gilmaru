@@ -32,6 +32,13 @@
       display: block;
     }
     #map { width: 100%; height: 100%; }
+    #grid-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 10;
+      pointer-events: none;
+    }
     #center-marker {
       position: absolute;
       top: 50%;
@@ -45,10 +52,9 @@
       pointer-events: none;
       z-index: 100;
     }
-
     #address-display {
       position: absolute;
-      top: calc(50% - 45px); /* 마커 위 10px 정도 */
+      top: calc(50% - 45px);
       left: 50%;
       transform: translateX(-50%);
       background: rgba(0, 0, 0, 0.75);
@@ -60,7 +66,6 @@
       z-index: 1001;
       pointer-events: none;
     }
-
     @media (max-width: 768px) {
       #header {
         flex-direction: column;
@@ -79,21 +84,18 @@
       align-self: center;
     }
   </style>
-
-  <!-- 카카오맵 SDK -->
   <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c2db0ea3cf94c9b50e56b5883f54537a"></script>
 </head>
 <body>
-
   <div id="header">
     <button onclick="showSection('map')">지도 보기</button>
     <button onclick="showSection('info')">설명 보기</button>
     <div id="zoom-indicator">Zoom: -</div>
   </div>
-
   <div id="content">
     <div id="map-section" class="active">
       <div id="map"></div>
+      <canvas id="grid-canvas"></canvas>
       <div id="center-marker"></div>
       <div id="address-display">코드: 로딩중...</div>
     </div>
@@ -104,7 +106,6 @@
       </div>
     </div>
   </div>
-
   <script src="word_data.js"></script>
   <script>
     const mapContainer = document.getElementById('map');
@@ -113,37 +114,68 @@
       level: 5
     };
     const map = new kakao.maps.Map(mapContainer, mapOption);
-    let gridOverlay = null;
-    let bigGridOverlay = null; // ← 추가: 2좌표 격자용
-  
-    function showSection(section) {
-      document.getElementById('map-section').classList.remove('active');
-      document.getElementById('info-section').classList.remove('active');
-      document.getElementById(`${section}-section`).classList.add('active');
+    const canvas = document.getElementById('grid-canvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvasToMap() {
+  const mapContainer = document.getElementById('map'); // ✅ 직접 DOM에서 가져옴
+  canvas.width = mapContainer.clientWidth;
+  canvas.height = mapContainer.clientHeight;
+}
+
+
+    function drawCanvasGrid() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const level = map.getLevel();
+      if (level < 4) return;
+
+      const bounds = map.getBounds();
+      const sw = bounds.getSouthWest();
+      const ne = bounds.getNorthEast();
+      const projection = map.getProjection();
+
+      const originLat = 33.0;
+      const originLng = 124.6;
+      const bigSize = 0.05;
+
+      const startX = Math.floor((sw.getLng() - originLng) / bigSize);
+      const endX = Math.floor((ne.getLng() - originLng) / bigSize);
+      const startY = Math.floor((sw.getLat() - originLat) / bigSize);
+      const endY = Math.floor((ne.getLat() - originLat) / bigSize);
+
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = 1;
+
+      for (let x = startX; x <= endX; x++) {
+        for (let y = startY; y <= endY; y++) {
+          const swLatLng = new kakao.maps.LatLng(originLat + y * bigSize, originLng + x * bigSize);
+          const neLatLng = new kakao.maps.LatLng(originLat + (y + 1) * bigSize, originLng + (x + 1) * bigSize);
+          const swPoint = projection.containerPointFromCoords(swLatLng);
+          const nePoint = projection.containerPointFromCoords(neLatLng);
+          const width = nePoint.x - swPoint.x;
+          const height = nePoint.y - swPoint.y;
+          ctx.strokeRect(swPoint.x, swPoint.y, width, height);
+        }
+      }
     }
-  
+
     function latLngToGilmaru(lat, lng, level) {
       const originLon = 124.6;
       const originLat = 33.0;
-  
       const blockSize = 0.05;
       const subBlockSize = 0.0001;
-  
       const x = Math.floor((lng - originLon) / blockSize);
       const y = Math.floor((lat - originLat) / blockSize);
       const codeX = "A" + String(x + 1).padStart(3, '0');
       const codeY = "B" + String(y + 1).padStart(3, '0');
-  
       if (level > 5) {
         return { code: `${codeX}.${codeY}`, x, y, gridSize: blockSize };
       }
-  
-      // 상세 주소 계산
       const innerX = Math.floor(((lng - originLon) % blockSize) / subBlockSize);
       const innerY = Math.floor(((lat - originLat) % blockSize) / subBlockSize);
       const codeC = "C" + String(innerX + 1).padStart(3, '0');
       const codeD = "D" + String(innerY + 1).padStart(3, '0');
-  
       return {
         code: `${codeX}.${codeY}.${codeC}.${codeD}`,
         x: x * 500 + innerX,
@@ -151,82 +183,34 @@
         gridSize: subBlockSize
       };
     }
-  
+
     function drawGrid(lat, lng, level) {
-  if (gridOverlay) gridOverlay.setMap(null);
-  if (bigGridOverlay) bigGridOverlay.setMap(null);
+      if (window.gridOverlay) gridOverlay.setMap(null);
+      const originLon = 124.6;
+      const originLat = 33.0;
+      const { gridSize } = latLngToGilmaru(lat, lng, level);
+      const x = Math.floor((lng - originLon) / gridSize);
+      const y = Math.floor((lat - originLat) / gridSize);
+      const swLatLng = new kakao.maps.LatLng(originLat + y * gridSize, originLon + x * gridSize);
+      const neLatLng = new kakao.maps.LatLng(originLat + (y + 1) * gridSize, originLon + (x + 1) * gridSize);
+      gridOverlay = new kakao.maps.Rectangle({
+        bounds: new kakao.maps.LatLngBounds(swLatLng, neLatLng),
+        strokeWeight: 2,
+        strokeColor: '#FF0000',
+        strokeOpacity: 0.8,
+        fillColor: '#FF0000',
+        fillOpacity: 0.1
+      });
+      gridOverlay.setMap(map);
+      drawCanvasGrid();
+    }
 
-  const originLon = 124.6;
-  const originLat = 33.0;
-
-  // 현재 그리드(레벨 기반)
-  const { gridSize, code } = latLngToGilmaru(lat, lng, level);
-  const x = Math.floor((lng - originLon) / gridSize);
-  const y = Math.floor((lat - originLat) / gridSize);
-  const swLatLng = new kakao.maps.LatLng(originLat + y * gridSize, originLon + x * gridSize);
-  const neLatLng = new kakao.maps.LatLng(originLat + (y + 1) * gridSize, originLon + (x + 1) * gridSize);
-
-  gridOverlay = new kakao.maps.Rectangle({
-    bounds: new kakao.maps.LatLngBounds(swLatLng, neLatLng),
-    strokeWeight: 2,
-    strokeColor: '#FF0000',
-    strokeOpacity: 0.8,
-    fillColor: '#FF0000',
-    fillOpacity: 0.1
-  });
-  gridOverlay.setMap(map);
-
-  // ✅ 추가: 대블록 격자 항상 표시 (0.05도 기준)
-  const bigSize = 0.05;
-  const bx = Math.floor((lng - originLon) / bigSize);
-  const by = Math.floor((lat - originLat) / bigSize);
-  const bsw = new kakao.maps.LatLng(originLat + by * bigSize, originLon + bx * bigSize);
-  const bne = new kakao.maps.LatLng(originLat + (by + 1) * bigSize, originLon + (bx + 1) * bigSize);
-
-  bigGridOverlay = new kakao.maps.Rectangle({
-    bounds: new kakao.maps.LatLngBounds(bsw, bne),
-    strokeWeight: 2,
-    strokeColor: '#000000',
-    strokeOpacity: 1,
-    fillOpacity: 0 // ⚠️ 채우지 않음
-  });
-  bigGridOverlay.setMap(map);
-}
-  
     function updateCenterAddress() {
       const center = map.getCenter();
       const level = map.getLevel();
       const gilmaru = latLngToGilmaru(center.getLat(), center.getLng(), level);
-
-      const text = fullAddress(gilmaru.code);
-      document.getElementById('address-display').textContent = `${text}`;
-
+      document.getElementById('address-display').textContent = fullAddress(gilmaru.code);
       drawGrid(center.getLat(), center.getLng(), level);
-    }
-
-  
-    function updateZoomDisplay() {
-      const zoom = map.getLevel();
-      document.getElementById('zoom-indicator').textContent = `Zoom: ${zoom}`;
-    }
-  
-    kakao.maps.event.addListener(map, 'idle', () => {
-      updateCenterAddress();
-      updateZoomDisplay();
-    });
-  
-    updateCenterAddress();
-    updateZoomDisplay();
-  
-    function getWordFromCode(code) {
-      const prefix = code[0];
-      const number = parseInt(code.slice(1)) - 1;
-
-      if (prefix === 'A') return wordA[number] || "???";
-      if (prefix === 'B') return wordB[number] || "???";
-      if (prefix === 'C') return wordC[number] || "???";
-      if (prefix === 'D') return wordD[number] || "???";
-      return "???";
     }
 
     function fullAddress(code) {
@@ -234,8 +218,39 @@
       return parts.map(getWordFromCode).join(", ");
     }
 
-  </script>
-  
+    function getWordFromCode(code) {
+      const prefix = code[0];
+      const number = parseInt(code.slice(1)) - 1;
+      if (prefix === 'A') return wordA[number] || "???";
+      if (prefix === 'B') return wordB[number] || "???";
+      if (prefix === 'C') return wordC[number] || "???";
+      if (prefix === 'D') return wordD[number] || "???";
+      return "???";
+    }
 
+    function showSection(section) {
+      document.getElementById('map-section').classList.remove('active');
+      document.getElementById('info-section').classList.remove('active');
+      document.getElementById(`${section}-section`).classList.add('active');
+    }
+
+    function updateZoomDisplay() {
+      document.getElementById('zoom-indicator').textContent = `Zoom: ${map.getLevel()}`;
+    }
+
+    kakao.maps.event.addListener(map, 'idle', () => {
+      updateCenterAddress();
+      updateZoomDisplay();
+    });
+
+    window.addEventListener('resize', () => {
+      resizeCanvasToMap();
+      drawCanvasGrid();
+    });
+
+    resizeCanvasToMap();
+    updateCenterAddress();
+    updateZoomDisplay();
+  </script>
 </body>
 </html>
