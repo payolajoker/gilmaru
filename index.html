@@ -45,6 +45,10 @@
       <button class="search-btn" onclick="handleSearch()">
         <span class="material-icons">search</span>
       </button>
+      <div style="width:1px; height:20px; background:#ddd; margin:0 8px;"></div>
+      <button class="search-btn" id="btn-intro" title="길마루 소개" style="color:var(--primary-color);">
+        <span class="material-icons">help_outline</span>
+      </button>
     </div>
   </div>
 
@@ -91,6 +95,47 @@
 
   <!-- Toast Notification -->
   <div id="toast">메시지</div>
+
+  <!-- Intro Modal -->
+  <div id="intro-modal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>길마루란?</h3>
+        <button id="btn-close-intro" class="close-btn"><span class="material-icons">close</span></button>
+      </div>
+      <div class="modal-content">
+        <p class="intro-main-text">
+          <b>"반달 자리 응원 햇볕"</b><br>
+          대한민국 <span class="highlight">모든 곳</span>을<br>
+          <span class="highlight">4개의 단어</span>로 기억하세요.
+        </p>
+
+        <div class="comparison-box">
+          <div class="comp-item">
+            <div class="comp-label">What3Words (w3w)</div>
+            <div class="comp-desc">"사과.바나나.책상"</div>
+            <div class="comp-note">기계적인 단어 나열</div>
+          </div>
+          <div class="comp-vs">VS</div>
+          <div class="comp-item highlight-item">
+            <div class="comp-label">길마루 (Gilmaru)</div>
+            <div class="comp-desc">"반달이 자리에서<br>응원과 햇볕"</div>
+            <div class="comp-note">이야기가 있는 문장</div>
+          </div>
+        </div>
+
+        <ul class="intro-features">
+          <li>✨ <b>감성 주소</b>: 외우기 쉬운 한글 문장</li>
+          <li>🎯 <b>10m 정밀도</b>: 만남의 장소, 입구 찾기에 최적</li>
+          <li>💸 <b>완전 무료</b>: 누구나 사용할 수 있는 오픈 플랫폼</li>
+        </ul>
+
+        <div class="modal-footer">
+          <p class="modal-footer-text">길마루 v1.4.3</p>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Scripts -->
   <script src="word_data.js"></script>

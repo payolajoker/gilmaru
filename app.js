@@ -153,6 +153,18 @@ function initEventListeners() {
 
     // Copy Button (Secondary action)
     document.getElementById('btn-copy').addEventListener('click', copyAddressToClipboard);
+
+    // Intro Modal
+    const modal = document.getElementById('intro-modal');
+    document.getElementById('btn-intro').addEventListener('click', () => {
+        modal.style.display = 'block';
+    });
+    document.getElementById('btn-close-intro').addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.style.display = 'none';
+    });
 }
 
 /* Core Logic: Map & Grid */
