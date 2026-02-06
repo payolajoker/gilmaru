@@ -216,6 +216,15 @@ body {
   color: var(--text-gray);
 }
 
+.sentence-address {
+  font-size: 14px;
+  color: var(--primary-color);
+  font-style: italic;
+  margin-bottom: 8px;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
 .road-address {
   font-size: 13px;
   color: var(--text-gray);

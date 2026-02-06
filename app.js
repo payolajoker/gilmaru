@@ -254,6 +254,45 @@ function latLngToGilmaru(lat, lng, level) {
     };
 }
 
+/* Sentence Generation Logic */
+function generateSentence(words, seed) {
+    if (words.length < 4) return "";
+
+    // 3 Templates
+    // Seed ensures the same location always gets the same template
+    const templateIdx = seed % 3;
+
+    const [A, B, C, D] = words;
+
+    if (templateIdx === 0) {
+        // A(이)가 B(에)서 C(와)과 D
+        return `${A}${getJosa(A, 'iga')} ${B}에서 ${C}${getJosa(C, 'wagwa')} ${D}`;
+    } else if (templateIdx === 1) {
+        // A(은)는 B, C 그리고 D
+        return `${A}${getJosa(A, 'eunneun')} ${B}, ${C} 그리고 ${D}`;
+    } else {
+        // A(와)과 B의 C, D
+        return `${A}${getJosa(A, 'wagwa')} ${B}의 ${C}, ${D}`;
+    }
+}
+
+function hasJongseong(word) {
+    if (!word) return false;
+    const lastChar = word.charCodeAt(word.length - 1);
+    // Hangul Syllables range: AC00 - D7A3
+    if (lastChar < 0xAC00 || lastChar > 0xD7A3) return false;
+    return (lastChar - 0xAC00) % 28 > 0;
+}
+
+function getJosa(word, type) {
+    const has = hasJongseong(word);
+    if (type === 'iga') return has ? '이' : '가'; // Corrected to '이' or '가'
+    if (type === 'eunneun') return has ? '은' : '는';
+    if (type === 'eulreul') return has ? '을' : '를';
+    if (type === 'wagwa') return has ? '과' : '와';
+    return '';
+}
+
 function fullAddress(code) {
     const parts = code.split(".");
     if (parts.length < 4) return "확대해서 확인하세요";
@@ -262,6 +301,12 @@ function fullAddress(code) {
     // "반달 자리 앞날 하루" looks cleaner.
     // But for copying, maybe "반달.자리.앞날.하루" is more unique to this system.
     // return parts.map(getWordFromCode).join(".");
+}
+
+function getWordsFromCode(code) {
+    const parts = code.split(".");
+    if (parts.length < 4) return [];
+    return parts.map(getWordFromCode);
 }
 
 function getWordFromCode(code) {
