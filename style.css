@@ -520,3 +520,11 @@ body {
     opacity: 1;
   }
 }
+
+/* Sentence Highlight */
+.highlight-word {
+  color: var(--primary-color);
+  font-weight: 700;
+  border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+  padding-bottom: 1px;
+}

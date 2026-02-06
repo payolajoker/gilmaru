@@ -251,7 +251,7 @@ function updateCenterAddress() {
     // 1.5 Sentence Address (Mnemonic)
     const words = getWordsFromCode(gilmaru.code);
     const sentence = generateSentence(words, gilmaru.x + gilmaru.y);
-    document.getElementById('sentence-text').textContent = `"${sentence}"`;
+    document.getElementById('sentence-text').innerHTML = `"${sentence}"`;
 
     // 2. Real Address & Place Name (Reverse Geocoding)
     updateDetailAddress(center.getLat(), center.getLng());
@@ -344,21 +344,49 @@ function latLngToGilmaru(lat, lng, level) {
 function generateSentence(words, seed) {
     if (words.length < 4) return "";
 
-    // 3 Templates
-    // Seed ensures the same location always gets the same template
-    const templateIdx = seed % 3;
+    // 1. Deterministic Shuffle based on seed
+    // We want the same location to always produce the same sentence structure
+    // but the order of words should be varied to make it natural.
+    const shuffledIdx = [0, 1, 2, 3];
 
-    const [A, B, C, D] = words;
+    // Simple seeded random
+    let randomVal = seed;
+    const seededRandom = () => {
+        randomVal = (randomVal * 9301 + 49297) % 233280;
+        return randomVal / 233280;
+    };
+
+    // Fisher-Yates Shuffle with seeded random
+    for (let i = shuffledIdx.length - 1; i > 0; i--) {
+        const j = Math.floor(seededRandom() * (i + 1));
+        [shuffledIdx[i], shuffledIdx[j]] = [shuffledIdx[j], shuffledIdx[i]];
+    }
+
+    const W = shuffledIdx.map(idx => words[idx]);
+
+    // Helper for highlight
+    const H = (word) => `<span class="highlight-word">${word}</span>`;
+
+    // 2. Templates (Expanded)
+    const templateIdx = Math.floor(seededRandom() * 5); // 5 templates
+
+    const [w1, w2, w3, w4] = W;
 
     if (templateIdx === 0) {
         // A(이)가 B(에)서 C(와)과 D
-        return `${A}${getJosa(A, 'iga')} ${B}에서 ${C}${getJosa(C, 'wagwa')} ${D}`;
+        return `${H(w1)}${getJosa(w1, 'iga')} ${H(w2)}에서 ${H(w3)}${getJosa(w3, 'wagwa')} ${H(w4)}`;
     } else if (templateIdx === 1) {
         // A(은)는 B, C 그리고 D
-        return `${A}${getJosa(A, 'eunneun')} ${B}, ${C} 그리고 ${D}`;
-    } else {
+        return `${H(w1)}${getJosa(w1, 'eunneun')} ${H(w2)}, ${H(w3)} 그리고 ${H(w4)}`;
+    } else if (templateIdx === 2) {
         // A(와)과 B의 C, D
-        return `${A}${getJosa(A, 'wagwa')} ${B}의 ${C}, ${D}`;
+        return `${H(w1)}${getJosa(w1, 'wagwa')} ${H(w2)}의 ${H(w3)}, ${H(w4)}`;
+    } else if (templateIdx === 3) {
+        // A, B(이)랑 C에서 D
+        return `${H(w1)}, ${H(w2)}${getJosa(w2, 'irang')} ${H(w3)}에서 ${H(w4)}`;
+    } else {
+        // A(이)가 B(을)를 만나 C(와)과 D
+        return `${H(w1)}${getJosa(w1, 'iga')} ${H(w2)}${getJosa(w2, 'eulreul')} 만나 ${H(w3)}${getJosa(w3, 'wagwa')} ${H(w4)}`;
     }
 }
 
@@ -372,10 +400,11 @@ function hasJongseong(word) {
 
 function getJosa(word, type) {
     const has = hasJongseong(word);
-    if (type === 'iga') return has ? '이' : '가'; // Corrected to '이' or '가'
+    if (type === 'iga') return has ? '이' : '가';
     if (type === 'eunneun') return has ? '은' : '는';
     if (type === 'eulreul') return has ? '을' : '를';
     if (type === 'wagwa') return has ? '과' : '와';
+    if (type === 'irang') return has ? '이랑' : '랑';
     return '';
 }
 
