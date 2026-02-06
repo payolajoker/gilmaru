@@ -1,272 +1,89 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8">
   <title>길마루 - 한글 주소 시스템</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: sans-serif; }
-    #header {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 10px;
-      padding: 10px;
-      background: #222;
-    }
-    #header button {
-      background: #fff;
-      border: none;
-      padding: 10px 20px;
-      font-size: 16px;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    #content > div {
-      display: none;
-      height: calc(100vh - 60px);
-      position: relative;
-    }
-    #map-section.active,
-    #info-section.active {
-      display: block;
-    }
-    #map { width: 100%; height: 100%; }
-    #grid-canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 10;
-      pointer-events: none;
-    }
-    #center-marker {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 36px;
-      height: 36px;
-      margin-left: -18px;
-      margin-top: -36px;
-      background: url('https://cdn-icons-png.flaticon.com/512/2776/2776067.png') no-repeat center center;
-      background-size: contain;
-      pointer-events: none;
-      z-index: 100;
-    }
-    #address-display {
-      position: absolute;
-      top: calc(50% - 45px);
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.75);
-      color: white;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 14px;
-      white-space: nowrap;
-      z-index: 1001;
-      pointer-events: none;
-    }
-    @media (max-width: 768px) {
-      #header {
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 10px;
-      }
-      #header button {
-        flex: 1 1 40%;
-        font-size: 16px;
-      }
-    }
-    #zoom-indicator {
-      color: white;
-      margin-left: auto;
-      margin-right: 20px;
-      font-size: 14px;
-      align-self: center;
-    }
-  </style>
-  <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c2db0ea3cf94c9b50e56b5883f54537a"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="대한민국 어디든 4단어로 표현하는 새로운 주소 시스템">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Kakao Maps SDK -->
+  <!-- libraries=services for Places Search -->
+  <script type="text/javascript"
+    src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=c2db0ea3cf94c9b50e56b5883f54537a&libraries=services"></script>
 </head>
+
 <body>
-  <div id="header">
-    <button onclick="showSection('map')">지도</button>
-    <button onclick="showSection('info')">소개</button>
-    <div id="zoom-indicator">Zoom: -</div>
-  </div>
-  <div id="content">
-    <div id="map-section" class="active">
-      <div id="map"></div>
-      <canvas id="grid-canvas"></canvas>
-      <div id="center-marker"></div>
-      <div id="address-display">코드: 로딩중...</div>
+
+  <!-- Map Area -->
+  <div id="map-container">
+    <div id="map"></div>
+    <canvas id="grid-canvas"></canvas>
+
+    <!-- Central Maker (Static Pin) -->
+    <div id="center-marker">
+      <svg viewBox="0 0 24 24">
+        <path
+          d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+      </svg>
     </div>
-    <div id="info-section">
-      <div style="padding: 20px; max-width: 700px; line-height: 1.6;">
-        <h2>길마루 주소 시스템 소개</h2>
-        <p><strong>길마루</strong>는 대한민국의 모든 위치를 <strong>네 개의 쉽고 친숙한 명사</strong>로 표현하는 새로운 위치 언어입니다.<br>
-        산이든 바다든, 도심이든 오지든, 대한민국 어디든 <strong>10m × 10m</strong> 크기의 격자로 나누어<br>
-        각 칸에 고유한 <strong>4단어 주소</strong>를 부여합니다.</p>
+  </div>
 
-        <h3>what3words와 무엇이 다른가요?</h3>
-        <ul>
-          <li><strong>순서가 중요하지 않습니다</strong> — 위치에 따라 단어군이 정해져 있어 순서를 바꿔도 같은 장소를 가리킵니다.</li>
-          <li><strong>더 쉬운 단어를 씁니다</strong> — 약 1,300개 미만의 두 글자 명사만 사용해 누구나 외우기 쉽고 말하기 편합니다.</li>
-          <li><strong>비슷한 단어는 비슷한 위치를 뜻합니다</strong> — 단어 배열에 질서를 부여해, 단어가 비슷하면 위치도 가깝습니다.</li>
-          <li><strong>10m 격자면 충분합니다</strong> — 일반 스마트폰 GPS는 보통 ±5m~10m 정도 오차가 있어 3m 단위는 과도하게 세밀합니다.</li>
-        </ul>
+  <!-- Top Search Bar -->
+  <div class="search-container">
+    <div class="search-box">
+      <input type="text" id="search-input" class="search-input" placeholder="장소 또는 길마루 주소 검색 (예: 강남역)">
+      <button class="search-btn" onclick="handleSearch()">
+        <span class="material-icons">search</span>
+      </button>
+    </div>
+  </div>
 
-        <h3>우리는 이렇게 믿습니다</h3>
-        <p>좋은 위치 언어는 <strong>누구나 외우기 쉽고, 말로 전하기 편하며, 기술에 얽매이지 않아야</strong> 합니다.<br>
-        길마루는 <strong>대한민국을 위한, 대한민국다운 주소 체계</strong>입니다.</p>
+  <!-- Right Floating Buttons -->
+  <div class="fab-container">
+    <button class="fab" id="btn-my-location" title="내 위치">
+      <span class="material-icons">my_location</span>
+    </button>
+    <!-- Map/Info Toggle could go here or in a separate menu. Keeping it simple for now as requested features are priority. -->
+  </div>
+
+  <!-- Zoom Indicator -->
+  <div id="zoom-indicator">Zoom: -</div>
+
+  <!-- Bottom Sheet (Address Display) -->
+  <div class="bottom-sheet">
+    <div class="address-card">
+      <div class="address-label">현재 위치의 길마루 주소</div>
+      <div class="gilmaru-address" id="address-text" title="클릭하여 복사">
+        로딩중...
+      </div>
+
+      <div class="action-buttons">
+        <button class="btn btn-primary" id="btn-share">
+          <span class="material-icons">share</span> 공유하기
+        </button>
+        <button class="btn btn-secondary" id="btn-copy">
+          <span class="material-icons">content_copy</span> 복사
+        </button>
       </div>
     </div>
   </div>
+
+  <!-- Toast Notification -->
+  <div id="toast">메시지</div>
+
+  <!-- Scripts -->
   <script src="word_data.js"></script>
-  <script>
-    const mapContainer = document.getElementById('map');
-    const mapOption = {
-      center: new kakao.maps.LatLng(37.4979, 127.0276),
-      level: 5
-    };
-    const map = new kakao.maps.Map(mapContainer, mapOption);
-    const canvas = document.getElementById('grid-canvas');
-    const ctx = canvas.getContext('2d');
-
-    function resizeCanvasToMap() {
-  const mapContainer = document.getElementById('map'); // ✅ 직접 DOM에서 가져옴
-  canvas.width = mapContainer.clientWidth;
-  canvas.height = mapContainer.clientHeight;
-}
-
-
-    function drawCanvasGrid() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const level = map.getLevel();
-      if (level < 4) return;
-
-      const bounds = map.getBounds();
-      const sw = bounds.getSouthWest();
-      const ne = bounds.getNorthEast();
-      const projection = map.getProjection();
-
-      const originLat = 33.0;
-      const originLng = 124.6;
-      const bigSize = 0.05;
-
-      const startX = Math.floor((sw.getLng() - originLng) / bigSize);
-      const endX = Math.floor((ne.getLng() - originLng) / bigSize);
-      const startY = Math.floor((sw.getLat() - originLat) / bigSize);
-      const endY = Math.floor((ne.getLat() - originLat) / bigSize);
-
-      ctx.strokeStyle = 'black';
-      ctx.lineWidth = 1;
-
-      for (let x = startX; x <= endX; x++) {
-        for (let y = startY; y <= endY; y++) {
-          const swLatLng = new kakao.maps.LatLng(originLat + y * bigSize, originLng + x * bigSize);
-          const neLatLng = new kakao.maps.LatLng(originLat + (y + 1) * bigSize, originLng + (x + 1) * bigSize);
-          const swPoint = projection.containerPointFromCoords(swLatLng);
-          const nePoint = projection.containerPointFromCoords(neLatLng);
-          const width = nePoint.x - swPoint.x;
-          const height = nePoint.y - swPoint.y;
-          ctx.strokeRect(swPoint.x, swPoint.y, width, height);
-        }
-      }
-    }
-
-    function latLngToGilmaru(lat, lng, level) {
-      const originLon = 124.6;
-      const originLat = 33.0;
-      const blockSize = 0.05;
-      const subBlockSize = 0.0001;
-      const x = Math.floor((lng - originLon) / blockSize);
-      const y = Math.floor((lat - originLat) / blockSize);
-      const codeX = "A" + String(x + 1).padStart(3, '0');
-      const codeY = "B" + String(y + 1).padStart(3, '0');
-      if (level > 5) {
-        return { code: `${codeX}.${codeY}`, x, y, gridSize: blockSize };
-      }
-      const innerX = Math.floor(((lng - originLon) % blockSize) / subBlockSize);
-      const innerY = Math.floor(((lat - originLat) % blockSize) / subBlockSize);
-      const codeC = "C" + String(innerX + 1).padStart(3, '0');
-      const codeD = "D" + String(innerY + 1).padStart(3, '0');
-      return {
-        code: `${codeX}.${codeY}.${codeC}.${codeD}`,
-        x: x * 500 + innerX,
-        y: y * 500 + innerY,
-        gridSize: subBlockSize
-      };
-    }
-
-    function drawGrid(lat, lng, level) {
-      if (window.gridOverlay) gridOverlay.setMap(null);
-      const originLon = 124.6;
-      const originLat = 33.0;
-      const { gridSize } = latLngToGilmaru(lat, lng, level);
-      const x = Math.floor((lng - originLon) / gridSize);
-      const y = Math.floor((lat - originLat) / gridSize);
-      const swLatLng = new kakao.maps.LatLng(originLat + y * gridSize, originLon + x * gridSize);
-      const neLatLng = new kakao.maps.LatLng(originLat + (y + 1) * gridSize, originLon + (x + 1) * gridSize);
-      gridOverlay = new kakao.maps.Rectangle({
-        bounds: new kakao.maps.LatLngBounds(swLatLng, neLatLng),
-        strokeWeight: 2,
-        strokeColor: '#FF0000',
-        strokeOpacity: 0.8,
-        fillColor: '#FF0000',
-        fillOpacity: 0.1
-      });
-      gridOverlay.setMap(map);
-      drawCanvasGrid();
-    }
-
-    function updateCenterAddress() {
-      const center = map.getCenter();
-      const level = map.getLevel();
-      const gilmaru = latLngToGilmaru(center.getLat(), center.getLng(), level);
-      document.getElementById('address-display').textContent = fullAddress(gilmaru.code);
-      drawGrid(center.getLat(), center.getLng(), level);
-    }
-
-    function fullAddress(code) {
-      const parts = code.split(".");
-      return parts.map(getWordFromCode).join(", ");
-    }
-
-    function getWordFromCode(code) {
-      const prefix = code[0];
-      const number = parseInt(code.slice(1)) - 1;
-      if (prefix === 'A') return wordA[number] || "???";
-      if (prefix === 'B') return wordB[number] || "???";
-      if (prefix === 'C') return wordC[number] || "???";
-      if (prefix === 'D') return wordD[number] || "???";
-      return "???";
-    }
-
-    function showSection(section) {
-      document.getElementById('map-section').classList.remove('active');
-      document.getElementById('info-section').classList.remove('active');
-      document.getElementById(`${section}-section`).classList.add('active');
-    }
-
-    function updateZoomDisplay() {
-      document.getElementById('zoom-indicator').textContent = `Zoom: ${map.getLevel()}`;
-    }
-
-    kakao.maps.event.addListener(map, 'idle', () => {
-      updateCenterAddress();
-      updateZoomDisplay();
-    });
-
-    window.addEventListener('resize', () => {
-      resizeCanvasToMap();
-      drawCanvasGrid();
-    });
-
-    resizeCanvasToMap();
-    updateCenterAddress();
-    updateZoomDisplay();
-  </script>
+  <script src="app.js"></script>
 </body>
+
 </html>
