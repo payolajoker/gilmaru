@@ -3,6 +3,7 @@ let map, gridOverlay;
 let canvas, ctx;
 let geocoder;
 let currentPlaceName = null; // Store place name from search
+let currentRoadAddress = null; // Store road address from search
 // word_data.js must be loaded before this file
 const KAKAO_API_KEY = "c2db0ea3cf94c9b50e56b5883f54537a"; // From original file
 
@@ -38,9 +39,10 @@ function initMap() {
         }
     });
 
-    // Reset place name on manual move
+    // Reset place name and address on manual move
     kakao.maps.event.addListener(map, 'dragstart', () => {
         currentPlaceName = null;
+        currentRoadAddress = null;
     });
     kakao.maps.event.addListener(map, 'zoom_changed', () => {
         // currentPlaceName = null; // Zoom doesn't necessarily change the "center place" intent significantly, but center changes.
@@ -176,6 +178,16 @@ function updateDetailAddress(lat, lng) {
     const placeEl = document.getElementById('place-name');
     const roadEl = document.getElementById('road-address');
 
+    // If we have a searched road address, use it directly (Priority 1)
+    if (currentRoadAddress) {
+        roadEl.textContent = currentRoadAddress;
+        if (currentPlaceName) {
+            placeEl.textContent = currentPlaceName;
+            placeEl.style.display = "block";
+        }
+        return; // Skip reverse geocoding to avoid overwriting with less accurate data
+    }
+
     geocoder.coord2Address(lng, lat, (result, status) => {
         if (status === kakao.maps.services.Status.OK) {
             const detail = result[0];
@@ -183,7 +195,8 @@ function updateDetailAddress(lat, lng) {
             const jibunAddr = detail.address ? detail.address.address_name : "";
             const buildingName = detail.road_address && detail.road_address.building_name ? detail.road_address.building_name : "";
 
-            // Display Address (Prefer Road, else Jibun)
+            // Display Address (Priority: Road > Jibun)
+            // User requested Road Address strongly.
             const displayAddr = roadAddr || jibunAddr;
             roadEl.textContent = displayAddr;
 
@@ -246,7 +259,6 @@ function fullAddress(code) {
     if (parts.length < 4) return "확대해서 확인하세요";
     return parts.map(getWordFromCode).join(" "); // Changed delimiter to space specifically, user might prefer dots. Let's use dots for uniqueness.
     // Actually, user example: "반달, 자리, 앞날, 하루". I will use dots for copy, render with spaces or customized.
-    // Let's stick to the prompt's example format or clean format.
     // "반달 자리 앞날 하루" looks cleaner.
     // But for copying, maybe "반달.자리.앞날.하루" is more unique to this system.
     // return parts.map(getWordFromCode).join(".");
@@ -301,6 +313,7 @@ function handleSearch() {
     if (keyword.includes(".") || keyword.split(" ").length === 4) {
         // Assume Gilmaru Address
         currentPlaceName = null; // Reset place name as we are navigating by coordinates
+        currentRoadAddress = null;
         resolveGilmaruAddress(keyword);
     } else {
         // Assume Place Search
@@ -314,6 +327,10 @@ function searchPlaces(keyword) {
         if (status === kakao.maps.services.Status.OK) {
             const place = data[0]; // Take first result
             currentPlaceName = place.place_name; // Set place name
+            // Store Road Address from search result (Ideally always exists for valid places)
+            // Fallback to address_name if road_address_name is empty
+            currentRoadAddress = place.road_address_name || place.address_name;
+
             const moveLatLon = new kakao.maps.LatLng(place.y, place.x);
             map.setCenter(moveLatLon);
             map.setLevel(2); // Zoom in closer
