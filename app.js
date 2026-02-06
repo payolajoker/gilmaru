@@ -21,7 +21,8 @@ function initDeepLink() {
     const code = params.get('code');
     if (code && code !== "undefined" && code !== "null" && code.trim() !== "") {
         // e.g. code="반달.자리.앞날.하루"
-        resolveGilmaruAddress(code);
+        // Silent mode: don't show error toast on initial load
+        resolveGilmaruAddress(code, true);
     }
 }
 
@@ -606,11 +607,11 @@ function searchPlaces(keyword) {
 // The user prompt didn't strictly require reverse lookup implementation details in the plan, but I mentioned it.
 // Without changing `word_data.js` to a map/object, reverse lookup is slow (O(N)).
 // BUT arrays are small (~800 items). O(N) is instant.
-function resolveGilmaruAddress(address) {
+function resolveGilmaruAddress(address, isSilent = false) {
     // Expected: "반달.자리.앞날.하루" or "반달 자리 앞날 하루"
-    const words = address.split(/[\.\s]/);
+    const words = address.split(/[.\s]/);
     if (words.length !== 4) {
-        showToast("잘못된 길마루 주소 형식입니다.");
+        if (!isSilent) showToast("잘못된 길마루 주소 형식입니다.");
         return;
     }
 
@@ -620,7 +621,7 @@ function resolveGilmaruAddress(address) {
     const idxD = wordD.indexOf(words[3]);
 
     if (idxA === -1 || idxB === -1 || idxC === -1 || idxD === -1) {
-        showToast("존재하지 않는 단어가 포함되어 있습니다.");
+        if (!isSilent) showToast("존재하지 않는 단어가 포함되어 있습니다.");
         return;
     }
 
@@ -657,7 +658,7 @@ function resolveGilmaruAddress(address) {
 
     map.setCenter(new kakao.maps.LatLng(lat, lng));
     map.setLevel(2);
-    showToast("주소 위치로 이동했습니다.");
+    if (!isSilent) showToast("주소 위치로 이동했습니다.");
 }
 
 
