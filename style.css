@@ -362,15 +362,25 @@ body {
 /* Intro Modal */
 .modal-overlay {
   display: none;
+  /* Hidden by default */
   position: fixed;
-  top: 0;
+  /* Stay in place */
+  z-index: 2000;
+  /* Sit on top */
   left: 0;
+  top: 0;
   width: 100%;
+  /* Full width */
   height: 100%;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 1000;
-  backdrop-filter: blur(4px);
-  animation: fadeIn 0.2s ease-out;
+  /* Full height */
+  overflow: auto;
+  /* Enable scroll if needed */
+  background-color: rgba(0, 0, 0, 0.4);
+  /* Black w/ opacity */
+  animation: fadeIn 0.3s;
+  /* Flexbox for centering */
+  justify-content: center;
+  align-items: center;
 }
 
 .modal {
@@ -594,13 +604,14 @@ body {
   color: #9ca3af;
   font-style: italic;
 }
+
 /* QR Card Styles */
 .qr-card {
   background: white;
   width: 100%;
   padding: 30px 20px;
   border-radius: 20px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -662,4 +673,3 @@ body {
   padding-top: 15px;
   width: 100%;
 }
-

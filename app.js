@@ -191,9 +191,26 @@ function showQRCode() {
     const highlightedWords = words.map(w => `<span class="highlight-word">${w}</span>`).join(" ");
     document.getElementById('qr-gilmaru-text').innerHTML = highlightedWords;
 
-    // Road Address
-    const roadAddr = currentRoadAddress || currentPlaceName || "주소 정보 없음";
-    document.getElementById('qr-road-address-text').innerText = roadAddr;
+    // Road Address Logic
+    const roadTxt = document.getElementById('qr-road-address-text');
+
+    // 1. Try existing data
+    if (currentRoadAddress || currentPlaceName) {
+        roadTxt.innerText = currentRoadAddress || currentPlaceName;
+    } else {
+        // 2. Fetch if missing
+        roadTxt.innerText = "주소 정보를 불러오는 중...";
+        geocoder.coord2Address(center.getLng(), center.getLat(), (result, status) => {
+            if (status === kakao.maps.services.Status.OK) {
+                const detail = result[0];
+                const addr = (detail.road_address ? detail.road_address.address_name : "") ||
+                    (detail.address ? detail.address.address_name : "주소 정보 없음");
+                roadTxt.innerText = addr;
+            } else {
+                roadTxt.innerText = "주소 정보 없음";
+            }
+        });
+    }
 
     // URL to share
     const link = `${window.location.origin}${window.location.pathname}?code=${gilmaru.code}`;
@@ -210,7 +227,7 @@ function showQRCode() {
         correctLevel: QRCode.CorrectLevel.H
     });
 
-    qrModal.style.display = 'flex'; // Center align via flex in CSS (modal-overlay)
+    qrModal.style.display = 'flex';
 }
 
 function saveQRImage() {
