@@ -19,10 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
 function initDeepLink() {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
-    if (code) {
+    if (code && code !== "undefined" && code !== "null" && code.trim() !== "") {
         // e.g. code="반달.자리.앞날.하루"
-        // resolveGilmaruAddress expects space or dot separated?
-        // Let's ensure it handles both.
         resolveGilmaruAddress(code);
     }
 }
