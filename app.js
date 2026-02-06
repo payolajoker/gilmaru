@@ -350,7 +350,7 @@ function drawHighlightGrid(lat, lng) {
 }
 
 function updateZoomDisplay() {
-    const el = document.getElementById('zoom-indicator');
+    const el = document.getElementById('zoom-level');
     if (el) el.textContent = `Zoom: ${map.getLevel()}`;
 }
 
