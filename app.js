@@ -240,24 +240,39 @@ function drawCanvasGrid() {
 }
 
 function updateCenterAddress() {
-    const center = map.getCenter();
-    const level = map.getLevel();
-    const gilmaru = latLngToGilmaru(center.getLat(), center.getLng(), level);
+    try {
+        const center = map.getCenter();
+        const level = map.getLevel();
+        const gilmaru = latLngToGilmaru(center.getLat(), center.getLng(), level);
 
-    // 1. Gilmaru Address
-    const addressText = fullAddress(gilmaru.code);
-    document.getElementById('address-text').innerHTML = `${addressText} <span class="material-icons copy-icon" style="font-size:16px; vertical-align:middle;">content_copy</span>`;
+        // 1. Gilmaru Address
+        const addressText = fullAddress(gilmaru.code);
+        const addressEl = document.getElementById('address-text');
+        if (addressEl) {
+            addressEl.innerHTML = `${addressText} <span class="material-icons copy-icon" style="font-size:16px; vertical-align:middle;">content_copy</span>`;
+        }
 
-    // 1.5 Sentence Address (Mnemonic)
-    const words = getWordsFromCode(gilmaru.code);
-    const sentence = generateSentence(words, gilmaru.x + gilmaru.y);
-    document.getElementById('sentence-text').innerHTML = `"${sentence}"`;
+        // 1.5 Sentence Address (Mnemonic)
+        const words = getWordsFromCode(gilmaru.code);
+        // Safety check if word data is missing
+        if (!words || words.some(w => w === "???" || w === undefined)) {
+            console.warn("Word data missing or undefined:", words);
+        }
 
-    // 2. Real Address & Place Name (Reverse Geocoding)
-    updateDetailAddress(center.getLat(), center.getLng());
+        const sentence = generateSentence(words, gilmaru.x + gilmaru.y);
+        const sentenceEl = document.getElementById('sentence-text');
+        if (sentenceEl) {
+            sentenceEl.innerHTML = `"${sentence}"`;
+        }
 
-    drawHighlightGrid(center.getLat(), center.getLng());
-    drawCanvasGrid(); // Redraw grid on move
+        // 2. Real Address & Place Name (Reverse Geocoding)
+        updateDetailAddress(center.getLat(), center.getLng());
+
+        drawHighlightGrid(center.getLat(), center.getLng());
+        drawCanvasGrid(); // Redraw grid on move
+    } catch (e) {
+        console.error("Critical Error in updateCenterAddress:", e);
+    }
 }
 
 function updateDetailAddress(lat, lng) {
