@@ -89,6 +89,9 @@
         <button class="btn btn-secondary" id="btn-copy">
           <span class="material-icons">content_copy</span> 복사
         </button>
+        <button class="btn btn-secondary" id="btn-qr" style="min-width: 48px; padding: 0 12px;" aria-label="QR 코드">
+          <span class="material-icons">qr_code_2</span>
+        </button>
       </div>
     </div>
   </div>
@@ -152,7 +155,36 @@
     </div>
   </div>
 
+  <!-- QR Code Modal -->
+  <div id="qr-modal" class="modal-overlay">
+    <div class="modal-container" style="max-width: 360px; background: transparent; box-shadow: none; padding: 0;">
+
+      <!-- The Card to Capture -->
+      <div id="qr-card-container" class="qr-card">
+        <div class="logo">길마루</div>
+        <div class="qr-box" id="qr-code-display"></div>
+        <h2 class="gilmaru-address" id="qr-gilmaru-text"></h2>
+        <p class="road-address" id="qr-road-address-text"></p>
+        <div class="footer-note">외우기 쉬운 한글 주소</div>
+      </div>
+
+      <!-- Actions -->
+      <div class="qr-actions"
+        style="margin-top: 20px; text-align: center; gap: 10px; display: flex; justify-content: center;">
+        <button id="btn-save-image" class="btn btn-primary" style="background:#3b82f6; border:none; color:white;">
+          <span class="material-icons" style="font-size:18px; margin-right:4px;">download</span> 이미지 저장
+        </button>
+        <button id="btn-close-qr" class="btn btn-secondary" style="background:white; color:#333;">
+          닫기
+        </button>
+      </div>
+
+    </div>
+  </div>
+
   <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
   <script src="word_data.js?v=1.7"></script>
   <script src="app.js?v=1.7"></script>
 </body>

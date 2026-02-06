@@ -165,6 +165,71 @@ function initEventListeners() {
     modal.addEventListener('click', (e) => {
         if (e.target === modal) modal.style.display = 'none';
     });
+
+    // QR Modal
+    const qrModal = document.getElementById('qr-modal');
+    document.getElementById('btn-qr').addEventListener('click', showQRCode);
+    document.getElementById('btn-close-qr').addEventListener('click', () => {
+        qrModal.style.display = 'none';
+    });
+    document.getElementById('btn-save-image').addEventListener('click', saveQRImage);
+    qrModal.addEventListener('click', (e) => {
+        if (e.target === qrModal) qrModal.style.display = 'none';
+    });
+}
+
+/* QR Code Logic */
+function showQRCode() {
+    const qrModal = document.getElementById('qr-modal');
+    const center = map.getCenter();
+    const gilmaru = latLngToGilmaru(center.getLat(), center.getLng(), 1); // Force precision level 1
+
+    // Updates
+    const words = getWordsFromCode(gilmaru.code);
+
+    // HTML with Highlight
+    const highlightedWords = words.map(w => `<span class="highlight-word">${w}</span>`).join(" ");
+    document.getElementById('qr-gilmaru-text').innerHTML = highlightedWords;
+
+    // Road Address
+    const roadAddr = currentRoadAddress || currentPlaceName || "주소 정보 없음";
+    document.getElementById('qr-road-address-text').innerText = roadAddr;
+
+    // URL to share
+    const link = `${window.location.origin}${window.location.pathname}?code=${gilmaru.code}`;
+
+    // Generate QR
+    const qrContainer = document.getElementById('qr-code-display');
+    qrContainer.innerHTML = ""; // Clear prev
+    new QRCode(qrContainer, {
+        text: link,
+        width: 140,
+        height: 140,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+    });
+
+    qrModal.style.display = 'flex'; // Center align via flex in CSS (modal-overlay)
+}
+
+function saveQRImage() {
+    const element = document.getElementById('qr-card-container');
+
+    html2canvas(element, {
+        scale: 2, // High resolution
+        backgroundColor: null, // Transparent background handled by element CSS
+        logging: false,
+        useCORS: true
+    }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `gilmaru-card-${Date.now()}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+    }).catch(err => {
+        console.error("Image save failed:", err);
+        alert("이미지 저장 중 오류가 발생했습니다.");
+    });
 }
 
 /* Core Logic: Map & Grid */
