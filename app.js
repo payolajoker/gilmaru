@@ -167,6 +167,11 @@ function updateCenterAddress() {
     const addressText = fullAddress(gilmaru.code);
     document.getElementById('address-text').innerHTML = `${addressText} <span class="material-icons copy-icon" style="font-size:16px; vertical-align:middle;">content_copy</span>`;
 
+    // 1.5 Sentence Address (Mnemonic)
+    const words = getWordsFromCode(gilmaru.code);
+    const sentence = generateSentence(words, gilmaru.x + gilmaru.y);
+    document.getElementById('sentence-text').textContent = `"${sentence}"`;
+
     // 2. Real Address & Place Name (Reverse Geocoding)
     updateDetailAddress(center.getLat(), center.getLng());
 
