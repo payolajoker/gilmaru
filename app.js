@@ -12,7 +12,76 @@ document.addEventListener('DOMContentLoaded', () => {
     initCanvas();
     initMap();
     initEventListeners();
+    // Check for deep link after map init
+    setTimeout(initDeepLink, 500); // Small delay to ensure map is ready
 });
+
+function initDeepLink() {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (code) {
+        // e.g. code="반달.자리.앞날.하루"
+        // resolveGilmaruAddress expects space or dot separated?
+        // Let's ensure it handles both.
+        resolveGilmaruAddress(code);
+    }
+}
+
+/* ... initMap, initCanvas, initEventListeners ... */
+
+/* Feature: Action Buttons */
+function getLinkToCurrentPosition() {
+    // Get current center code
+    const center = map.getCenter();
+    const level = map.getLevel(); // User might be zoomed differently, but Gilmaru code is pos based.
+    // We need 'level' for latLngToGilmaru but actually we want the code for the center regardless of zoom
+    // BUT latLngToGilmaru uses level to simplify if > 5. Let's force level 1 calculation for accurate code.
+    const gilmaru = latLngToGilmaru(center.getLat(), center.getLng(), 1);
+
+    // Convert code (A001.B001...) to Words
+    const words = getWordsFromCode(gilmaru.code);
+    const wordString = words.join(".");
+
+    const baseUrl = window.location.href.split('?')[0];
+    return `${baseUrl}?code=${wordString}`;
+}
+
+function copyAddressToClipboard() {
+    const addressText = document.getElementById('address-text').innerText.trim().split(" ")[0]; // Remove icon
+    const link = getLinkToCurrentPosition();
+    const textToCopy = `${addressText}\n${link}`;
+
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        showToast("주소와 링크가 복사되었습니다!");
+    }).catch(() => {
+        showToast("복사 실패");
+    });
+}
+
+function shareAddress() {
+    const addressText = document.getElementById('address-text').innerText.trim().split(" ")[0];
+    const link = getLinkToCurrentPosition();
+    const sentence = document.getElementById('sentence-text').innerText.replaceAll('"', '');
+
+    if (navigator.share) {
+        navigator.share({
+            title: '길마루 주소',
+            text: `${addressText}\n"${sentence}"`,
+            url: link
+        }).then(() => console.log('Shared')).catch((error) => console.log('Sharing failed', error));
+    } else {
+        copyAddressToClipboard();
+        showToast("링크가 복사되었습니다.");
+    }
+}
+
+/* UI Helper: Toast */
+function showToast(message) {
+    const toast = document.getElementById("toast");
+    toast.innerText = message;
+    toast.className = "show";
+    setTimeout(function () { toast.className = toast.className.replace("show", ""); }, 3000);
+}
 
 function initMap() {
     const mapContainer = document.getElementById('map');
