@@ -270,6 +270,12 @@ function updateCenterAddress() {
 
         drawHighlightGrid(center.getLat(), center.getLng());
         drawCanvasGrid(); // Redraw grid on move
+
+        // 3. Update Browser URL (Deep Link Sync)
+        // Update the URL without reloading page so users can copy/share immediately
+        const newUrl = `${window.location.pathname}?code=${gilmaru.code}`;
+        window.history.replaceState({ path: newUrl }, '', newUrl);
+
     } catch (e) {
         console.error("Critical Error in updateCenterAddress:", e);
     }
