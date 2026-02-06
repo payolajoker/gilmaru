@@ -1,6 +1,8 @@
 /* Global Variables */
 let map, gridOverlay;
 let canvas, ctx;
+let geocoder;
+let currentPlaceName = null; // Store place name from search
 // word_data.js must be loaded before this file
 const KAKAO_API_KEY = "c2db0ea3cf94c9b50e56b5883f54537a"; // From original file
 
@@ -19,6 +21,9 @@ function initMap() {
     };
     map = new kakao.maps.Map(mapContainer, mapOption);
 
+    // Init Geocoder
+    geocoder = new kakao.maps.services.Geocoder();
+
     // Initial Updates
     resizeCanvasToMap();
     updateCenterAddress();
@@ -31,6 +36,18 @@ function initMap() {
         } catch (e) {
             console.error("Idle update failed", e);
         }
+    });
+
+    // Reset place name on manual move
+    kakao.maps.event.addListener(map, 'dragstart', () => {
+        currentPlaceName = null;
+    });
+    kakao.maps.event.addListener(map, 'zoom_changed', () => {
+        // currentPlaceName = null; // Zoom doesn't necessarily change the "center place" intent significantly, but center changes.
+        // Actually idle triggers updateCenterAddress, which will re-evaluate. 
+        // If we strictly want to keep "Searched Place" until moved away, dragstart is good. 
+        // If center changes by zoom, coordinates change slightly or same? 
+        // Let's keep place name on zoom if center behaves.
     });
 
     // Zoom control logic if needed, but we rely on touch/scroll
@@ -75,6 +92,7 @@ function resizeCanvasToMap() {
 }
 
 function drawCanvasGrid() {
+    if (!canvas || !ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const level = map.getLevel();
@@ -143,11 +161,50 @@ function updateCenterAddress() {
     const level = map.getLevel();
     const gilmaru = latLngToGilmaru(center.getLat(), center.getLng(), level);
 
+    // 1. Gilmaru Address
     const addressText = fullAddress(gilmaru.code);
     document.getElementById('address-text').innerHTML = `${addressText} <span class="material-icons copy-icon" style="font-size:16px; vertical-align:middle;">content_copy</span>`;
 
+    // 2. Real Address & Place Name (Reverse Geocoding)
+    updateDetailAddress(center.getLat(), center.getLng());
+
     drawHighlightGrid(center.getLat(), center.getLng());
     drawCanvasGrid(); // Redraw grid on move
+}
+
+function updateDetailAddress(lat, lng) {
+    const placeEl = document.getElementById('place-name');
+    const roadEl = document.getElementById('road-address');
+
+    geocoder.coord2Address(lng, lat, (result, status) => {
+        if (status === kakao.maps.services.Status.OK) {
+            const detail = result[0];
+            const roadAddr = detail.road_address ? detail.road_address.address_name : "";
+            const jibunAddr = detail.address ? detail.address.address_name : "";
+            const buildingName = detail.road_address && detail.road_address.building_name ? detail.road_address.building_name : "";
+
+            // Display Address (Prefer Road, else Jibun)
+            const displayAddr = roadAddr || jibunAddr;
+            roadEl.textContent = displayAddr;
+
+            // Display Place Name priorities:
+            // 1. Searched Place Name (currentPlaceName)
+            // 2. Building Name from Geocoder
+            // 3. Region Name (if no building) - Optional, maybe too generic.
+
+            let displayPlace = currentPlaceName || buildingName;
+
+            if (displayPlace) {
+                placeEl.textContent = displayPlace;
+                placeEl.style.display = "block";
+            } else {
+                placeEl.style.display = "none";
+            }
+        } else {
+            roadEl.textContent = "";
+            placeEl.style.display = "none";
+        }
+    });
 }
 
 /* Gilmaru Logic (Ported) */
@@ -192,7 +249,7 @@ function fullAddress(code) {
     // Let's stick to the prompt's example format or clean format.
     // "반달 자리 앞날 하루" looks cleaner.
     // But for copying, maybe "반달.자리.앞날.하루" is more unique to this system.
-    return parts.map(getWordFromCode).join(".");
+    // return parts.map(getWordFromCode).join(".");
 }
 
 function getWordFromCode(code) {
@@ -243,6 +300,7 @@ function handleSearch() {
     // Check if it's a Gilmaru address (Format: Word.Word.Word.Word)
     if (keyword.includes(".") || keyword.split(" ").length === 4) {
         // Assume Gilmaru Address
+        currentPlaceName = null; // Reset place name as we are navigating by coordinates
         resolveGilmaruAddress(keyword);
     } else {
         // Assume Place Search
@@ -255,9 +313,10 @@ function searchPlaces(keyword) {
     ps.keywordSearch(keyword, (data, status) => {
         if (status === kakao.maps.services.Status.OK) {
             const place = data[0]; // Take first result
+            currentPlaceName = place.place_name; // Set place name
             const moveLatLon = new kakao.maps.LatLng(place.y, place.x);
             map.setCenter(moveLatLon);
-            map.setLevel(3);
+            map.setLevel(2); // Zoom in closer
             showToast(`'${place.place_name}'(으)로 이동했습니다.`);
         } else {
             showToast("장소를 찾을 수 없습니다.");
