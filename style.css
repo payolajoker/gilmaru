@@ -318,7 +318,7 @@ body {
 }
 
 #app-version {
-  position: absolute;
+  position: fixed;
   bottom: 4px;
   right: 8px;
   font-size: 11px;

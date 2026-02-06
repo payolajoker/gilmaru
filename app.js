@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initMap();
     initEventListeners();
     // Check for deep link after map init
-    setTimeout(initDeepLink, 500); // Small delay to ensure map is ready
+    setTimeout(initDeepLink, 1000); // Small delay to ensure map is ready
 });
 
 function initDeepLink() {
@@ -541,14 +541,22 @@ function moveToMyLocation() {
 
 /* Feature: Action Buttons */
 function getLinkToCurrentPosition() {
-    // Get current center code
-    const center = map.getCenter();
-    const gilmaru = latLngToGilmaru(center.getLat(), center.getLng(), 1);
+    // Generate link based on CURRENTLY DISPLAYED address text
+    // This ensures What You See Is What You Copy
+    const addressNode = document.getElementById('address-text').firstChild;
+    const addressText = addressNode ? addressNode.textContent.trim() : "";
 
-    // Convert code (A001.B001...) to Words
-    const words = getWordsFromCode(gilmaru.code);
-    const wordString = words.join(".");
+    // addressText is "Word Word Word Word" (space separated)
+    // Convert to dot separated for unique URL param
+    if (!addressText || addressText === "로딩중..." || addressText.includes("확대해서")) {
+        // Fallback to calculation if text is not ready
+        const center = map.getCenter();
+        const gilmaru = latLngToGilmaru(center.getLat(), center.getLng(), 1);
+        return `${window.location.href.split('?')[0]}?code=${getWordsFromCode(gilmaru.code).join(".")}`;
+    }
 
+    // Replace spaces with dots for URL code
+    const wordString = addressText.split(" ").join(".");
     const baseUrl = window.location.href.split('?')[0];
     return `${baseUrl}?code=${encodeURIComponent(wordString)}`;
 }
