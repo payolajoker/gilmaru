@@ -525,6 +525,72 @@ body {
 .highlight-word {
   color: var(--primary-color);
   font-weight: 700;
+  font-weight: 700;
   border-bottom: 2px solid rgba(59, 130, 246, 0.3);
   padding-bottom: 1px;
+}
+
+/* Tech Specs (Details/Summary) */
+.tech-specs {
+  margin-top: 16px;
+  border-top: 1px solid #f3f4f6;
+  padding-top: 12px;
+  font-size: 13px;
+}
+
+.tech-specs summary {
+  cursor: pointer;
+  color: #6b7280;
+  font-weight: 600;
+  list-style: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+}
+
+.tech-specs summary::-webkit-details-marker {
+  display: none;
+}
+
+.tech-specs summary::after {
+  content: "expand_more";
+  font-family: 'Material Icons';
+  font-size: 16px;
+  transition: transform 0.2s;
+}
+
+.tech-specs[open] summary::after {
+  transform: rotate(180deg);
+}
+
+.specs-content {
+  margin-top: 12px;
+  background: #f9fafb;
+  padding: 12px;
+  border-radius: 8px;
+  text-align: left;
+  animation: fadeIn 0.3s ease;
+}
+
+.specs-content p {
+  margin-bottom: 6px;
+  color: #4b5563;
+  line-height: 1.4;
+}
+
+.specs-content p:last-child {
+  margin-bottom: 0;
+}
+
+.specs-content b {
+  color: #374151;
+  font-weight: 600;
+}
+
+.specs-content .sub-text {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #9ca3af;
+  font-style: italic;
 }
