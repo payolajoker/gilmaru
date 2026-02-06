@@ -540,26 +540,49 @@ function moveToMyLocation() {
 }
 
 /* Feature: Action Buttons */
+function getLinkToCurrentPosition() {
+    // Get current center code
+    const center = map.getCenter();
+    const gilmaru = latLngToGilmaru(center.getLat(), center.getLng(), 1);
+
+    // Convert code (A001.B001...) to Words
+    const words = getWordsFromCode(gilmaru.code);
+    const wordString = words.join(".");
+
+    const baseUrl = window.location.href.split('?')[0];
+    return `${baseUrl}?code=${encodeURIComponent(wordString)}`;
+}
 function copyAddressToClipboard() {
-    const text = document.getElementById('address-text').innerText.trim().split(" ")[0]; // Remove icon text if any
-    navigator.clipboard.writeText(text).then(() => {
-        showToast("주소가 복사되었습니다!");
+    // Correct way to get text without icon ligatures
+    const addressNode = document.getElementById('address-text').firstChild;
+    const addressText = addressNode ? addressNode.textContent.trim() : "주소 로딩중";
+
+    const link = getLinkToCurrentPosition();
+    const textToCopy = `${addressText}\n${link}`;
+
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        showToast("주소와 링크가 복사되었습니다!");
     }).catch(() => {
         showToast("복사 실패");
     });
 }
 
 function shareAddress() {
-    const text = document.getElementById('address-text').innerText.trim().split(" ")[0];
+    const addressNode = document.getElementById('address-text').firstChild;
+    const addressText = addressNode ? addressNode.textContent.trim() : "주소 로딩중";
+
+    const link = getLinkToCurrentPosition();
+    const sentence = document.getElementById('sentence-text').innerText.replaceAll('"', '');
+
     if (navigator.share) {
         navigator.share({
             title: '길마루 주소',
-            text: `내 위치: ${text}`,
-            url: window.location.href
+            text: `${addressText}\n"${sentence}"`,
+            url: link
         }).then(() => console.log('Shared')).catch((error) => console.log('Sharing failed', error));
     } else {
         copyAddressToClipboard();
-        showToast("공유하기를 지원하지 않아 복사되었습니다.");
+        showToast("링크가 복사되었습니다.");
     }
 }
 
