@@ -561,36 +561,38 @@ function getLinkToCurrentPosition() {
     return `${baseUrl}?code=${encodeURIComponent(wordString)}`;
 }
 function copyAddressToClipboard() {
-    // Correct way to get text without icon ligatures
+    // Only copy the 4 words as requested
     const addressNode = document.getElementById('address-text').firstChild;
-    const addressText = addressNode ? addressNode.textContent.trim() : "주소 로딩중";
+    const addressText = addressNode ? addressNode.textContent.trim() : "";
 
-    const link = getLinkToCurrentPosition();
-    const textToCopy = `${addressText}\n${link}`;
+    if (!addressText || addressText === "로딩중...") {
+        showToast("주소가 로딩되지 않았습니다.");
+        return;
+    }
 
-    navigator.clipboard.writeText(textToCopy).then(() => {
-        showToast("주소와 링크가 복사되었습니다!");
+    navigator.clipboard.writeText(addressText).then(() => {
+        showToast("주소가 복사되었습니다.");
     }).catch(() => {
         showToast("복사 실패");
     });
 }
 
 function shareAddress() {
-    const addressNode = document.getElementById('address-text').firstChild;
-    const addressText = addressNode ? addressNode.textContent.trim() : "주소 로딩중";
-
+    // Only share the link to the location
     const link = getLinkToCurrentPosition();
-    const sentence = document.getElementById('sentence-text').innerText.replaceAll('"', '');
 
     if (navigator.share) {
         navigator.share({
             title: '길마루 주소',
-            text: `${addressText}\n"${sentence}"`,
             url: link
         }).then(() => console.log('Shared')).catch((error) => console.log('Sharing failed', error));
     } else {
-        copyAddressToClipboard();
-        showToast("링크가 복사되었습니다.");
+        // Fallback: Copy Link
+        navigator.clipboard.writeText(link).then(() => {
+            showToast("링크가 복사되었습니다.");
+        }).catch(() => {
+            showToast("복사 실패");
+        });
     }
 }
 
